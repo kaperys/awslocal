@@ -1,4 +1,4 @@
-# awslocal
+# awslocal [![Go Report Card](https://goreportcard.com/badge/github.com/kaperys/awslocal)](https://goreportcard.com/report/github.com/kaperys/awslocal)
 
 `awslocal` is a wrapper for the Golang AWS SDK which makes interacting with [LocalStack](https://github.com/localstack/localstack) services easier. Simply replace your `aws.NewConfig()` with `awslocal.NewConfig()`.
 

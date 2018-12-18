@@ -1,38 +1,17 @@
 // Copyright (c) 2018, Mike Kaperys <mike@kaperys.io>
 // See LICENSE for licensing information.
 
-// Package awslocal provides configuration for the AWS Go SDK for use with LocalStack.
+// Package awslocal provides a LocalStack wrapper for the AWS Go SDK.
 package awslocal
 
-import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/pkg/errors"
-)
+import "github.com/aws/aws-sdk-go/aws"
 
-var (
-	// CredentialsID is the static ID used by the AWS SDK when calling LocalStack services.
-	// LocalStack currently ignores all authentication mechanisms (ie, it will accept any), however
-	// the AWS SDK enforces that credentials, in some form (profile, IAM role, static, etc), are
-	// provided. See: https://github.com/localstack/localstack/issues/62#issuecomment-294749459
-	CredentialsID = "dummy-localstack-credentials-id"
-
-	// CredentialsSecret is the static secret used by the AWS SDK when calling LocalStack services.
-	// LocalStack currently ignores all authentication mechanisms (ie, it will accept any), however
-	// the AWS SDK enforces that credentials, in some form (profile, IAM role, static, etc), are
-	// provided. See: https://github.com/localstack/localstack/issues/62#issuecomment-294749459
-	CredentialsSecret = "dummy-localstack-credentials-secret"
-
-	// CredentialsToken is the static token used by the AWS SDK when calling LocalStack services.
-	// LocalStack currently ignores all authentication mechanisms (ie, it will accept any), however
-	// the AWS SDK enforces that credentials, in some form (profile, IAM role, static, etc), are
-	// provided. See: https://github.com/localstack/localstack/issues/62#issuecomment-294749459
-	CredentialsToken = "dummy-localstack-credentials-token"
-)
+// A Service is a reference to a supported LocalStack service.
+type Service byte
 
 const (
 	// ServiceAPIGateway is a constant value used to identify the LocalStack API Gateway service.
-	ServiceAPIGateway = iota
+	ServiceAPIGateway Service = iota
 
 	// ServiceKinesis is a constant value used to identify the LocalStack Kinesis service.
 	ServiceKinesis
@@ -86,49 +65,9 @@ const (
 	ServiceSecretsManager
 )
 
-// NewConfig returns a pointer to a new aws.Config. NewConfig accepts many Option funcs, which configure
-// the aws.Config type. If one or more Options are provided, they are iterated and executed.
-func NewConfig(opts ...Option) *aws.Config {
-	cfg := new(aws.Config)
-
-	if opts != nil {
-		for _, o := range opts {
-			o(cfg)
-		}
-	}
-
-	return cfg
-}
-
-// An Option func configures the aws.Config type with a particular value. Option types should only be
-// concerned with one particular configuration value, such as region or endpoint.
-type Option func(c *aws.Config)
-
-// WithRegion specifies the region to be used when calling services.
-func WithRegion(region string) Option {
-	return func(c *aws.Config) {
-		c.Region = aws.String(region)
-	}
-}
-
-// WithEndpoint overrides the service endpoint used when calling services.
-func WithEndpoint(endpoint string) Option {
-	return func(c *aws.Config) {
-		c.Endpoint = aws.String(endpoint)
-	}
-}
-
-// WithDummyCredentials configures the Config with dummy static credentials. Credentials are ignored by LocalStack,
-// however the Go AWS SDK endforces that credentials, in some form, are provided.
-func WithDummyCredentials() Option {
-	return func(c *aws.Config) {
-		c.Credentials = credentials.NewStaticCredentials(CredentialsID, CredentialsSecret, CredentialsToken)
-	}
-}
-
-// Endpoint retrieves the LocalStack service endpoint.
-func Endpoint(svc int) (string, error) {
-	se := map[int]string{
+// Wrap wraps the given aws.Config with the LocalStack Endpoint of the service.
+func Wrap(c *aws.Config, svc Service) {
+	se := map[Service]string{
 		ServiceAPIGateway:           "http://localhost:4567",
 		ServiceKinesis:              "http://localhost:4568",
 		ServiceDynamoDB:             "http://localhost:4569",
@@ -149,10 +88,7 @@ func Endpoint(svc int) (string, error) {
 		ServiceSecretsManager:       "http://localhost:4584",
 	}
 
-	endpoint, ok := se[svc]
-	if !ok {
-		return "", errors.New("service endpoint not found")
+	if endpoint, ok := se[svc]; ok {
+		c.Endpoint = aws.String(endpoint)
 	}
-
-	return endpoint, nil
 }
